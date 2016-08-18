@@ -1,0 +1,6 @@
+Originally http://code.google.com/p/re2/
+
+This version taken from Chromium at c81e0cce848adda65b4e78b1a6a51e6670296e5f
+with various local patches, and trimmed to just the code.
+
+License: BSD 3-Clause License
