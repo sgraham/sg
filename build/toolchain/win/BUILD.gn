@@ -2,10 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-#ar = "C:/Program Files (x86)/LLVM/bin/clang-cl.exe"
-#cc = "C:/Program Files (x86)/LLVM/bin/clang-cl.exe"
-#cxx = "C:/Program Files (x86)/LLVM/bin/clang-cl.exe"
-ar = "cl.exe"
+ar = "lib.exe"
 cc = "cl.exe"
 cxx = "cl.exe"
 ld = "link.exe"
@@ -38,7 +35,7 @@ toolchain("win") {
     description = "RC {{output}}"
   }
   tool("alink") {
-    command = "$ar {{output}} {{inputs}}"
+    command = "$ar /nologo /out:{{output}} {{inputs}}"
     description = "LIB {{output}}"
     outputs = [
       "{{target_out_dir}}/{{target_output_name}}{{output_extension}}",
