@@ -80,39 +80,46 @@ static_library("re2") {
   include_dirs = [ "//third_party/re2" ]
 }
 
-static_library("glfw") {
-  defines = [
-    "_GLFW_WIN32",
-  ]
-  cflags = [
-    "/wd4100",
-    "/wd4152",
-    "/wd4204",
-    "/wd4244",
-  ]
-  sources = [
-    "third_party/glfw/src/context.c",
-    "third_party/glfw/src/init.c",
-    "third_party/glfw/src/input.c",
-    "third_party/glfw/src/monitor.c",
-    "third_party/glfw/src/vulkan.c",
-    "third_party/glfw/src/window.c",
-    "third_party/glfw/src/win32_init.c",
-    "third_party/glfw/src/win32_joystick.c",
-    "third_party/glfw/src/win32_monitor.c",
-    "third_party/glfw/src/win32_time.c",
-    "third_party/glfw/src/win32_tls.c",
-    "third_party/glfw/src/win32_window.c",
-    "third_party/glfw/src/wgl_context.c",
-    "third_party/glfw/src/egl_context.c",
-  ]
+if (is_win) {
+  static_library("glfw") {
+    defines = [
+      "_GLFW_WIN32",
+    ]
+    cflags = [
+      "/wd4100",
+      "/wd4152",
+      "/wd4204",
+      "/wd4244",
+    ]
+    sources = [
+      "third_party/glfw/src/context.c",
+      "third_party/glfw/src/init.c",
+      "third_party/glfw/src/input.c",
+      "third_party/glfw/src/monitor.c",
+      "third_party/glfw/src/vulkan.c",
+      "third_party/glfw/src/window.c",
+      "third_party/glfw/src/win32_init.c",
+      "third_party/glfw/src/win32_joystick.c",
+      "third_party/glfw/src/win32_monitor.c",
+      "third_party/glfw/src/win32_time.c",
+      "third_party/glfw/src/win32_tls.c",
+      "third_party/glfw/src/win32_window.c",
+      "third_party/glfw/src/wgl_context.c",
+      "third_party/glfw/src/egl_context.c",
+    ]
+  }
 }
 
 executable("sg") {
   deps = [
-    ":glfw",
     ":sglib",
   ]
+
+  if (is_win) {
+    deps += [
+      ":glfw",
+    ]
+  }
 
   sources = [
     "src/main.cc",
