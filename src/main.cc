@@ -1,214 +1,399 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#include "third_party/imgui/imgui.h"
 #include <stdio.h>
-#if 0
-#include "core.h"
-#include "dbgeng/debugger_dbgeng.h"
-#include "debugger.h"
-#include "docking_split_container.h"
-#include "docking_tool_window.h"
-#include "docking_workspace.h"
-#include "entry.h"
-#include "focus.h"
-#include "gfx.h"
-#include "skin.h"
-#include "solid_color.h"
-#include "source_view/source_view.h"
-#include "text_edit.h"
-#include "tree_grid.h"
+#include <GLFW/glfw3.h>
 
-#if 0
-#include "clang-c/Index.h"
+struct GLFWwindow;
+
+IMGUI_API bool        ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks);
+IMGUI_API void        ImGui_ImplGlfw_Shutdown();
+IMGUI_API void        ImGui_ImplGlfw_NewFrame();
+
+// Use if you want to reset your rendering device without losing ImGui state.
+IMGUI_API void        ImGui_ImplGlfw_InvalidateDeviceObjects();
+IMGUI_API bool        ImGui_ImplGlfw_CreateDeviceObjects();
+
+// GLFW callbacks (installed by default if you enable 'install_callbacks' during initialization)
+// Provided here if you want to chain callbacks.
+// You can also handle inputs yourself and use those as a reference.
+IMGUI_API void        ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+IMGUI_API void        ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+IMGUI_API void        ImGui_ImplGlFw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+IMGUI_API void        ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c);
+
+// ImGui GLFW binding with OpenGL
+// In this binding, ImTextureID is used to store an OpenGL 'GLuint' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+
+// If your context is GL3/GL3 then prefer using the code in opengl3_example.
+// You *might* use this code with a GL3/GL4 context but make sure you disable the programmable pipeline by calling "glUseProgram(0)" before ImGui::Render().
+// We cannot do that from GL2 code because the function doesn't exist. 
+
+// You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
+// If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
+// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
+// https://github.com/ocornut/imgui
+
+// GLFW
+#include <GLFW/glfw3.h>
+#ifdef _WIN32
+#undef APIENTRY
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#include <GLFW/glfw3native.h>
 #endif
 
-void FillColumns(TreeGridNode* node,
-                 const char* name,
-                 const char* value,
-                 const char* type) {
-  node->SetValue(0, new TreeGridNodeValueString(name));
-  node->SetValue(1, new TreeGridNodeValueString(value));
-  node->SetValue(2, new TreeGridNodeValueString(type));
-}
+// Data
+static GLFWwindow*  g_Window = NULL;
+static double       g_Time = 0.0f;
+static bool         g_MousePressed[3] = { false, false, false };
+static float        g_MouseWheel = 0.0f;
+static GLuint       g_FontTexture = 0;
 
-void FillWatchWithSampleData(TreeGrid* watch) {
-  // The TreeGrid owns all these pointers once they're added.
+// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
+// If text or lines are blurry when integrating ImGui in your engine:
+// - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
+void ImGui_ImplGlfw_RenderDrawLists(ImDrawData* draw_data)
+{
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    ImGuiIO& io = ImGui::GetIO();
+    int fb_width = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
+    int fb_height = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
+    if (fb_width == 0 || fb_height == 0)
+        return;
+    draw_data->ScaleClipRects(io.DisplayFramebufferScale);
 
-  TreeGridColumn* name_column = new TreeGridColumn(watch, "Name");
-  TreeGridColumn* value_column = new TreeGridColumn(watch, "Value");
-  TreeGridColumn* type_column = new TreeGridColumn(watch, "Type");
-  watch->Columns()->push_back(name_column);
-  watch->Columns()->push_back(value_column);
-  watch->Columns()->push_back(type_column);
-  name_column->SetWidthPercentage(0.25f);
-  value_column->SetWidthPercentage(0.5f);
-  type_column->SetWidthPercentage(0.25f);
+    // We are using the OpenGL fixed pipeline to make the example code simpler to read!
+    // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
+    GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+    GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
+    glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_SCISSOR_TEST);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+    glEnable(GL_TEXTURE_2D);
+    //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context
 
-  TreeGridNode* root0 = new TreeGridNode(watch, NULL);
-  watch->Nodes()->push_back(root0);
-  FillColumns(root0,
-              "this",
-              "{root_=unique_ptr {direction_=kSplitNoneRoot (0) "
-              "fraction_=0.50000000000000000 left_=unique_ptr "
-              "{direction_=kSplitHorizontal (2) fraction_=0.69999999999999996 "
-              "left_=unique_ptr ...} ...} ...}",
-              "DockingWorkspace *");
-  root0->SetExpanded(true);
+    // Setup viewport, orthographic projection matrix
+    glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, +1.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
 
-  TreeGridNode* child0 = new TreeGridNode(watch, root0);
-  root0->Nodes()->push_back(child0);
-  FillColumns(child0, "InputHandler", "{...}", "InputHandler");
+    // Render command lists
+    #define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
+    {
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        const unsigned char* vtx_buffer = (const unsigned char*)&cmd_list->VtxBuffer.front();
+        const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer.front();
+        glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, pos)));
+        glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, uv)));
+        glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, col)));
 
-  TreeGridNode* child1 = new TreeGridNode(watch, root0);
-  root0->Nodes()->push_back(child1);
-  FillColumns(child1,
-              "root_",
-              "unique_ptr {direction_=kSplitNoneRoot (0) "
-              "fraction_=0.50000000000000000 left_=unique_ptr "
-              "{direction_=kSplitHorizontal (2) fraction_=0.69999999999999996 "
-              "left_=unique_ptr {...} ...} ...}",
-              "std::unique_ptr<DockingSplitContainer,std::default_delete<"
-              "DockingSplitContainer> >");
-
-  TreeGridNode* child2 = new TreeGridNode(watch, root0);
-  root0->Nodes()->push_back(child2);
-  FillColumns(child2, "mouse_position_", "{x=1924 y=440 }", "Point");
-
-  TreeGridNode* child2_0 = new TreeGridNode(watch, child2);
-  child2->Nodes()->push_back(child2_0);
-  FillColumns(child2_0, "x", "1924", "int");
-
-  TreeGridNode* child2_1 = new TreeGridNode(watch, child2);
-  child2->Nodes()->push_back(child2_1);
-  FillColumns(child2_1, "y", "440", "int");
-
-  TreeGridNode* child3 = new TreeGridNode(watch, root0);
-  root0->Nodes()->push_back(child3);
-  FillColumns(child3,
-              "draggable_",
-              "empty",
-              "std::unique_ptr<Draggable,std::default_delete<Draggable> >");
-
-  TreeGridNode* root1 = new TreeGridNode(watch, NULL);
-  watch->Nodes()->push_back(root1);
-  FillColumns(root1,
-              "target",
-              "0x040a87b0 {color_={rgba=0x040a87c8 {0.000000000, 0.168627456, "
-              "0.211764708, 1.00000000} r=0.000000000 ...} }",
-              "Dockable *");
-}
-
-class MainLoop : public DebuggerDelegate {
- public:
-  MainLoop() {
-    //scoped_ptr<Debugger> debugger(new DebuggerDbgEng);
-    //debugger->LaunchProcess("scratch/test_target.exe");
-
-    const Skin& skin = Skin::current();
-    const ColorScheme& cs = skin.GetColorScheme();
-    SourceView* source_view = new SourceView();
-    source_view->SetFilePath("src\\main.cc");
-
-    DockingToolWindow* stack =
-        new DockingToolWindow(new SolidColor(cs.background()), "Stack");
-
-    TreeGrid* watch_contents = new TreeGrid();
-    DockingToolWindow* watch = new DockingToolWindow(watch_contents, "Watch");
-
-    FillWatchWithSampleData(watch_contents);
-    // TODO(scottmg): Figure out who's responsible for dealing on mutate.
-    watch_contents->MoveFocusByDirection(TreeGrid::kFocusDown);
-
-    DockingToolWindow* breakpoints =
-        new DockingToolWindow(new TreeGrid(), "Breakpoints");
-
-    TextEdit* command_contents = new TextEdit();
-    DockingToolWindow* command =
-        new DockingToolWindow(command_contents, "Command");
-    SetFocusedContents(command_contents);
-
-    main_area_.SetRoot(source_view);
-    source_view->parent()->AsDockingSplitContainer()->SplitChild(
-        kSplitHorizontal, source_view, command);
-    source_view->parent()->AsDockingSplitContainer()->SetFraction(0.7f);
-
-    source_view->parent()->AsDockingSplitContainer()->SplitChild(
-        kSplitVertical, source_view, stack);
-    source_view->parent()->AsDockingSplitContainer()->SetFraction(0.4f);
-
-    stack->parent()->AsDockingSplitContainer()->SplitChild(
-        kSplitVertical, stack, watch);
-    stack->parent()->AsDockingSplitContainer()->SetFraction(0.5f);
-
-    stack->parent()->AsDockingSplitContainer()->SplitChild(
-        kSplitHorizontal, stack, breakpoints);
-    stack->parent()->AsDockingSplitContainer()->SetFraction(0.7f);
-  }
-
-  void Run() {
-    const Skin& skin = Skin::current();
-
-    uint32_t prev_width = 0, prev_height = 0;
-    uint32_t width, height;
-    while (!ProcessEvents(&width, &height, &main_area_)) {
-      if (prev_width != width || prev_height != height) {
-        main_area_.SetScreenRect(
-            Rect(skin.border_size() / GetDpiScale(),
-                skin.border_size() / GetDpiScale(),
-                (width - skin.border_size() * 2) / GetDpiScale(),
-                (height - skin.border_size() * 2) / GetDpiScale()));
-        GfxResize(width, height);
-        prev_width = width;
-        prev_height = height;
-      }
-
-      main_area_.Render();
-      GfxDrawFps();
-      GfxFrame();
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
+        {
+            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            if (pcmd->UserCallback)
+            {
+                pcmd->UserCallback(cmd_list, pcmd);
+            }
+            else
+            {
+                glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
+                glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
+                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer);
+            }
+            idx_buffer += pcmd->ElemCount;
+        }
     }
-  }
+    #undef OFFSETOF
 
- private:
-
-  // DebuggerDelegate:
-  void OnProcessLaunched(ProcessId process_id) {
-    printf("Launched(%lld)\n", process_id);
-  }
-
-  void OnStopped(ProcessId process_id) {
-    printf("Stopped(%lld)\n", process_id);
-  }
-
-  void OnGotLocation(ProcessId process_id, uint64_t ip) {
-    printf("Location(%lld): %lld\n", process_id, ip);
-  }
-
-
-
-  DockingWorkspace main_area_;
-  //scoped_ptr<Debugger> debugger_;
-  
-  DISALLOW_COPY_AND_ASSIGN(MainLoop);
-};
-
-int Main(int argc, char** argv) {
-  GfxInit();
-  Skin::LoadData();
-
-  UNUSED(argc);
-  UNUSED(argv);
-
-  MainLoop main_loop;
-  main_loop.Run();
-
-  GfxShutdown();
-
-  return 0;
+    // Restore modified state
+    glDisableClientState(GL_COLOR_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glBindTexture(GL_TEXTURE_2D, (GLuint)last_texture);
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glPopAttrib();
+    glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 }
+
+static const char* ImGui_ImplGlfw_GetClipboardText()
+{
+    return glfwGetClipboardString(g_Window);
+}
+
+static void ImGui_ImplGlfw_SetClipboardText(const char* text)
+{
+    glfwSetClipboardString(g_Window, text);
+}
+
+void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow*, int button, int action, int /*mods*/)
+{
+    if (action == GLFW_PRESS && button >= 0 && button < 3)
+        g_MousePressed[button] = true;
+}
+
+void ImGui_ImplGlfw_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yoffset)
+{
+    g_MouseWheel += (float)yoffset; // Use fractional mouse wheel, 1.0 unit 5 lines.
+}
+
+void ImGui_ImplGlFw_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (action == GLFW_PRESS)
+        io.KeysDown[key] = true;
+    if (action == GLFW_RELEASE)
+        io.KeysDown[key] = false;
+
+    (void)mods; // Modifiers are not reliable across systems
+    io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
+    io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
+    io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
+    io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
+}
+
+void ImGui_ImplGlfw_CharCallback(GLFWwindow*, unsigned int c)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (c > 0 && c < 0x10000)
+        io.AddInputCharacter((unsigned short)c);
+}
+
+bool ImGui_ImplGlfw_CreateDeviceObjects()
+{
+    // Build texture atlas
+    ImGuiIO& io = ImGui::GetIO();
+    unsigned char* pixels;
+    int width, height;
+    io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
+
+    // Upload texture to graphics system
+    GLint last_texture;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+    glGenTextures(1, &g_FontTexture);
+    glBindTexture(GL_TEXTURE_2D, g_FontTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, pixels);
+
+    // Store our identifier
+    io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
+
+    // Restore state
+    glBindTexture(GL_TEXTURE_2D, last_texture);
+
+    return true;
+}
+
+void    ImGui_ImplGlfw_InvalidateDeviceObjects()
+{
+    if (g_FontTexture)
+    {
+        glDeleteTextures(1, &g_FontTexture);
+        ImGui::GetIO().Fonts->TexID = 0;
+        g_FontTexture = 0;
+    }
+}
+
+bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
+{
+    g_Window = window;
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
+    io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
+    io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
+    io.KeyMap[ImGuiKey_DownArrow] = GLFW_KEY_DOWN;
+    io.KeyMap[ImGuiKey_PageUp] = GLFW_KEY_PAGE_UP;
+    io.KeyMap[ImGuiKey_PageDown] = GLFW_KEY_PAGE_DOWN;
+    io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
+    io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
+    io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
+    io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
+    io.KeyMap[ImGuiKey_Enter] = GLFW_KEY_ENTER;
+    io.KeyMap[ImGuiKey_Escape] = GLFW_KEY_ESCAPE;
+    io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;
+    io.KeyMap[ImGuiKey_C] = GLFW_KEY_C;
+    io.KeyMap[ImGuiKey_V] = GLFW_KEY_V;
+    io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
+    io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
+    io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
+
+    io.RenderDrawListsFn = ImGui_ImplGlfw_RenderDrawLists;      // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
+    io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
+    io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
+#ifdef _WIN32
+    io.ImeWindowHandle = glfwGetWin32Window(g_Window);
 #endif
-int main(int argc, char** argv) {
-  (void)argc;
-  (void)argv;
-  printf("hi\n");
+
+    if (install_callbacks)
+    {
+        glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
+        glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
+        glfwSetKeyCallback(window, ImGui_ImplGlFw_KeyCallback);
+        glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+    }
+
+    return true;
+}
+
+void ImGui_ImplGlfw_Shutdown()
+{
+    ImGui_ImplGlfw_InvalidateDeviceObjects();
+    ImGui::Shutdown();
+}
+
+void ImGui_ImplGlfw_NewFrame()
+{
+    if (!g_FontTexture)
+        ImGui_ImplGlfw_CreateDeviceObjects();
+
+    ImGuiIO& io = ImGui::GetIO();
+
+    // Setup display size (every frame to accommodate for window resizing)
+    int w, h;
+    int display_w, display_h;
+    glfwGetWindowSize(g_Window, &w, &h);
+    glfwGetFramebufferSize(g_Window, &display_w, &display_h);
+    io.DisplaySize = ImVec2((float)w, (float)h);
+    io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
+
+    // Setup time step
+    double current_time =  glfwGetTime();
+    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
+    g_Time = current_time;
+
+    // Setup inputs
+    // (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
+    if (glfwGetWindowAttrib(g_Window, GLFW_FOCUSED))
+    {
+        double mouse_x, mouse_y;
+        glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
+        io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);   // Mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
+    }
+    else
+    {
+        io.MousePos = ImVec2(-1,-1);
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        io.MouseDown[i] = g_MousePressed[i] || glfwGetMouseButton(g_Window, i) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+        g_MousePressed[i] = false;
+    }
+
+    io.MouseWheel = g_MouseWheel;
+    g_MouseWheel = 0.0f;
+
+    // Hide OS mouse cursor if ImGui is drawing it
+    glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
+
+    // Start the frame
+    ImGui::NewFrame();
+}
+
+
+static void error_callback(int error, const char* description) {
+  fprintf(stderr, "Error %d: %s\n", error, description);
+}
+
+int main(int, char**) {
+  // Setup window
+  glfwSetErrorCallback(error_callback);
+  if (!glfwInit())
+    return 1;
+  GLFWwindow* window =
+      glfwCreateWindow(1280, 720, "ImGui OpenGL2 example", NULL, NULL);
+  glfwMakeContextCurrent(window);
+
+  // Setup ImGui binding
+  ImGui_ImplGlfw_Init(window, true);
+
+  // Load Fonts
+  // (there is a default font, this is only if you want to change it. see
+  // extra_fonts/README.txt for more details)
+  // ImGuiIO& io = ImGui::GetIO();
+  // io.Fonts->AddFontDefault();
+  // io.Fonts->AddFontFromFileTTF("../../extra_fonts/Cousine-Regular.ttf",
+  // 15.0f);
+  // io.Fonts->AddFontFromFileTTF("../../extra_fonts/DroidSans.ttf", 16.0f);
+  // io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyClean.ttf", 13.0f);
+  // io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyTiny.ttf", 10.0f);
+  // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f,
+  // NULL, io.Fonts->GetGlyphRangesJapanese());
+
+  bool show_test_window = true;
+  bool show_another_window = false;
+  ImVec4 clear_color = ImColor(114, 144, 154);
+
+  // Main loop
+  while (!glfwWindowShouldClose(window)) {
+    glfwPollEvents();
+    ImGui_ImplGlfw_NewFrame();
+
+    // 1. Show a simple window
+    // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in
+    // a window automatically called "Debug"
+    {
+      static float f = 0.0f;
+      ImGui::Text("Hello, world!");
+      ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+      ImGui::ColorEdit3("clear color", (float*)&clear_color);
+      if (ImGui::Button("Test Window"))
+        show_test_window ^= 1;
+      if (ImGui::Button("Another Window"))
+        show_another_window ^= 1;
+      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+                  1000.0f / ImGui::GetIO().Framerate,
+                  ImGui::GetIO().Framerate);
+    }
+
+    // 2. Show another simple window, this time using an explicit Begin/End pair
+    if (show_another_window) {
+      ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiSetCond_FirstUseEver);
+      ImGui::Begin("Another Window", &show_another_window);
+      ImGui::Text("Hello");
+      ImGui::End();
+    }
+
+    // 3. Show the ImGui test window. Most of the sample code is in
+    // ImGui::ShowTestWindow()
+    if (show_test_window) {
+      ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
+      ImGui::ShowTestWindow(&show_test_window);
+    }
+
+    // Rendering
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui::Render();
+    glfwSwapBuffers(window);
+  }
+
+  // Cleanup
+  ImGui_ImplGlfw_Shutdown();
+  glfwTerminate();
+
   return 0;
 }

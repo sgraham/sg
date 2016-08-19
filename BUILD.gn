@@ -88,12 +88,23 @@ executable("sg") {
   sources = [
     "src/main.cc",
     "src/sg.rc",
+    "third_party/imgui/imgui.cpp",
+    "third_party/imgui/imgui_demo.cpp",
+    "third_party/imgui/imgui_draw.cpp",
   ]
 
   if (is_win) {
     libs = [
       "gdi32.lib",
       "user32.lib",
+    ]
+  } else if (is_mac) {
+    libs = [
+      "OpenGL.framework",
+      "Cocoa.framework",
+      "IOKit.framework",
+      "CoreVideo.framework",
+      "glfw3",
     ]
   }
 }

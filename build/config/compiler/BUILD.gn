@@ -4,13 +4,17 @@
 
 config("default_include_dirs") {
   include_dirs = [
-    "//src",
+    "//",
     root_gen_dir,
   ]
 
   if (is_win) {
     include_dirs += [
       "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/INCLUDE",
+    ]
+  } else if (is_mac) {
+    include_dirs += [
+      "/usr/local/include",
     ]
   }
 }
@@ -35,6 +39,10 @@ config("compiler") {
       "/wd4201",
       "/wd4702",
       "/wd4267",
+    ]
+  } else if (is_mac) {
+    lib_dirs = [
+      "/usr/local/lib",
     ]
   }
 }
