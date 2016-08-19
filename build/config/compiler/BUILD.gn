@@ -4,10 +4,15 @@
 
 config("default_include_dirs") {
   include_dirs = [
-    "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/INCLUDE",
     "//src",
     root_gen_dir,
   ]
+
+  if (is_win) {
+    include_dirs += [
+      "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/INCLUDE",
+    ]
+  }
 }
 
 config("compiler") {
@@ -17,50 +22,76 @@ config("compiler") {
   ldflags = []
   defines = []
 
-  cflags_cc += [
-    "/wd4530",
-    "-GR-"
-  ]
+  if (is_win) {
+    cflags_cc += [
+      "/wd4530",
+      "-GR-"
+    ]
 
-  cflags += [
-    "/FS",
-    "/FC",
-    "/wd4996",
-    #"-Wno-deprecated-declarations",
-    "/wd4201",
-    "/wd4702",
-    "/wd4267",
-  ]
+    cflags += [
+      "/FS",
+      "/FC",
+      "/wd4996",
+      "/wd4201",
+      "/wd4702",
+      "/wd4267",
+    ]
+  }
 }
 
 config("default_warnings") {
-  cflags = [
-    "/W4",
-    "/WX",
-  ]
-  defines = [
-    "_CRT_SECURE_NO_WARNINGS",
-    "_HAS_EXCEPTIONS=0",
-    "NOMINMAX",
-    "WIN32",
-    "_WIN32",
-  ]
+  if (is_mac) {
+    cflags = [
+      "-Wall",
+      "-Werror",
+    ]
+  } else if (is_win) {
+    cflags = [
+      "/W4",
+      "/WX",
+    ]
+  }
+
+  if (is_win) {
+    defines = [
+      "_CRT_SECURE_NO_WARNINGS",
+      "_HAS_EXCEPTIONS=0",
+      "NOMINMAX",
+      "WIN32",
+      "_WIN32",
+    ]
+  }
 }
 
 config("optimize") {
-  cflags = [
-    "/Ox",
-  ]
+  if (is_win) {
+    cflags = [
+      "/Ox",
+    ]
+  } else if (is_mac) {
+    cflags = [
+      "-O2",
+    ]
+  }
 }
 
 config("no_optimize") {
-  cflags = [ "/Od" ]
-  ldflags = [ "/DEBUG" ]
+  if (is_win) {
+    cflags = [ "/Od" ]
+    ldflags = [ "/DEBUG" ]
+  } else if (is_mac) {
+    cflags = [ "-O0" ]
+  }
 }
 
 config("symbols") {
-  cflags = [ "/Zi" ]
-  ldflags = [ "/DEBUG" ]
+  if (is_win) {
+    cflags = [ "/Zi" ]
+    ldflags = [ "/DEBUG" ]
+  } else if (is_mac) {
+    cflags = [ "-g" ]
+    ldflags = [ "-g" ]
+  }
 }
 
 config("minimal_symbols") {

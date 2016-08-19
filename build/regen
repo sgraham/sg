@@ -1,0 +1,3 @@
+#!/bin/sh
+build/bin/mac/gn gen out/Debug --args="is_debug=true"
+build/bin/mac/gn gen out/Release --args="is_debug=false"

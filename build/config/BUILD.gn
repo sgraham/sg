@@ -6,16 +6,20 @@ config("debug") {
   defines = [
     "_DEBUG",
   ]
-  cflags = [
-    "/MTd",
-  ]
+  if (is_win) {
+    cflags = [
+      "/MTd",
+    ]
+  }
 }
 
 config("release") {
   defines = [
     "NDEBUG",
   ]
-  cflags = [
-    "/MT",
-  ]
+  if (is_win) {
+    cflags = [
+      "/MT",
+    ]
+  }
 }
