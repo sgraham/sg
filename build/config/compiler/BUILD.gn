@@ -41,6 +41,9 @@ config("compiler") {
       "/wd4267",
     ]
   } else if (is_mac) {
+    cflags_cc += [
+      "-std=c++11",
+    ]
     lib_dirs = [
       "/usr/local/lib",
     ]

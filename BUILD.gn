@@ -125,7 +125,6 @@ executable("sg") {
     "src/main.cc",
     "src/sg.rc",
     "third_party/imgui/imgui.cpp",
-    "third_party/imgui/imgui_demo.cpp",
     "third_party/imgui/imgui_draw.cpp",
   ]
 
