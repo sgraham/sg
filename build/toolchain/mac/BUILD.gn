@@ -28,7 +28,7 @@ template("mac_toolchain") {
         rebase_path("//build/toolchain/mac/linker_driver.py", root_build_dir)
 
     _enable_dsyms = enable_dsyms
-    _save_unstripped_output = true
+    _save_unstripped_output = enable_dsyms
 
     # Make these apply to all tools below.
     lib_switch = "-l"

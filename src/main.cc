@@ -249,6 +249,7 @@ bool    ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks)
     g_Window = window;
 
     ImGuiIO& io = ImGui::GetIO();
+    io.IniFilename = nullptr;
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
@@ -1451,8 +1452,8 @@ int main(int, char**) {
   // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f,
   // NULL, io.Fonts->GetGlyphRangesJapanese());
 
-  bool show_test_window = true;
-  bool show_another_window = false;
+  //bool show_test_window = true;
+  //bool show_another_window = false;
   ImVec4 clear_color = ImColor(114, 144, 154);
 
   // Main loop
@@ -1460,6 +1461,7 @@ int main(int, char**) {
     glfwPollEvents();
     ImGui_ImplGlfw_NewFrame();
 
+#if 0
     // 1. Show a simple window
     // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in
     // a window automatically called "Debug"
@@ -1484,10 +1486,17 @@ int main(int, char**) {
       ImGui::Text("Hello");
       ImGui::End();
     }
+#endif
 
     {
-      ImGui::SetNextWindowSize(ImVec2(400, 500), ImGuiSetCond_FirstUseEver);
-      if (ImGui::Begin("Dock Demo")) {
+      ImGui::SetNextWindowPos(ImVec2(0, 0));
+      ImGui::SetNextWindowSize(
+          ImVec2(1280, 720),
+          ImGuiSetCond_FirstUseEver);
+      if (ImGui::Begin("Workspace",
+                       NULL,
+                       ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                           ImGuiWindowFlags_NoScrollbar)) {
         ImGui::BeginDockspace();
         if (ImGui::BeginDock("Dock 1")) {
           ImGui::Text("This was a triumph...");
