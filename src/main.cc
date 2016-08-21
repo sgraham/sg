@@ -1492,8 +1492,9 @@ int main(int, char**) {
   glfwSetErrorCallback(error_callback);
   if (!glfwInit())
     return 1;
+  glfwWindowHint(GLFW_MAXIMIZED, 1);
   GLFWwindow* window =
-      glfwCreateWindow(1280, 720, "ImGui OpenGL2 example", NULL, NULL);
+      glfwCreateWindow(1280, 720, "Seaborgium", NULL, NULL);
   glfwMakeContextCurrent(window);
 
   // Setup ImGui binding
@@ -1502,26 +1503,85 @@ int main(int, char**) {
   // Load Fonts
   // (there is a default font, this is only if you want to change it. see
   // extra_fonts/README.txt for more details)
-  // ImGuiIO& io = ImGui::GetIO();
+  ImGuiIO& io = ImGui::GetIO();
+  ImFontConfig config;
+  config.OversampleH = 5;
+  config.OversampleV = 5;
   // io.Fonts->AddFontDefault();
   // io.Fonts->AddFontFromFileTTF("../../extra_fonts/Cousine-Regular.ttf",
   // 15.0f);
-  // io.Fonts->AddFontFromFileTTF("../../extra_fonts/DroidSans.ttf", 16.0f);
+  // TODO(scottmg): Font with macOS symbols.
+  static const ImWchar ranges[] = {
+      0x0020,
+      0x00FF,  // Basic Latin + Latin Supplement.
+      0x21e7, 0x21e7,  // Shift.
+      0x2303, 0x2303,  // Control.
+      0x2318, 0x2318,  // Command.
+      0x2325, 0x2325,  // Option.
+      0,
+  };
+  io.Fonts->AddFontFromFileTTF(
+      "Inconsolata-Regular.ttf", 15.0f, &config, ranges);
   // io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyClean.ttf", 13.0f);
   // io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyTiny.ttf", 10.0f);
   // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f,
   // NULL, io.Fonts->GetGlyphRangesJapanese());
 
-  // bool show_test_window = true;
-  // bool show_another_window = false;
+  bool show_test_window = true;
+  bool show_another_window = false;
   ImVec4 clear_color = ImColor(114, 144, 154);
 
   // Main loop
   while (!glfwWindowShouldClose(window)) {
-    glfwPollEvents();
+    glfwWaitEvents();
     ImGui_ImplGlfw_NewFrame();
 
-#if 0
+#if defined(OS_MAC)
+#define MAIN_MODIFIER "Cmd-"
+#define EXTRA_MODIFIER "Opt-"
+#else
+#define MAIN_MODIFIER "Ctrl-"
+#define EXTRA_MODIFIER "Alt-"
+#endif
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+          if (ImGui::MenuItem("Open", MAIN_MODIFIER EXTRA_MODIFIER "O")) {
+          }
+          if (ImGui::MenuItem("Open From Symbols", MAIN_MODIFIER "O")) {
+          }
+          ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("View"))
+        {
+          if (ImGui::MenuItem("Command", MAIN_MODIFIER EXTRA_MODIFIER "C")) {
+          }
+          if (ImGui::MenuItem("Output", MAIN_MODIFIER EXTRA_MODIFIER "O")) {
+          }
+          if (ImGui::MenuItem("Registers", MAIN_MODIFIER EXTRA_MODIFIER "R")) {
+          }
+          if (ImGui::MenuItem("Locals", MAIN_MODIFIER EXTRA_MODIFIER "L")) {
+          }
+          if (ImGui::MenuItem("Stack", MAIN_MODIFIER EXTRA_MODIFIER "S")) {
+          }
+          if (ImGui::MenuItem("Watch", MAIN_MODIFIER EXTRA_MODIFIER "W")) {
+          }
+          if (ImGui::MenuItem("Memory 1", MAIN_MODIFIER EXTRA_MODIFIER "M")) {
+          }
+          if (ImGui::MenuItem("Memory 2", "")) {
+          }
+          if (ImGui::MenuItem("Memory 3", "")) {
+          }
+          if (ImGui::MenuItem("Memory 4", "")) {
+          }
+#undef MAIN_MODIFIER
+#undef EXTRA_MODIFIER
+          ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+
     // 1. Show a simple window
     // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in
     // a window automatically called "Debug"
@@ -1534,9 +1594,6 @@ int main(int, char**) {
         show_test_window ^= 1;
       if (ImGui::Button("Another Window"))
         show_another_window ^= 1;
-      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-                  1000.0f / ImGui::GetIO().Framerate,
-                  ImGui::GetIO().Framerate);
     }
 
     // 2. Show another simple window, this time using an explicit Begin/End pair
@@ -1546,8 +1603,8 @@ int main(int, char**) {
       ImGui::Text("Hello");
       ImGui::End();
     }
-#endif
 
+#if 0
     {
       ImGui::SetNextWindowPos(ImVec2(0, 0));
       ImGui::SetNextWindowSize(ImVec2(1280, 720), ImGuiSetCond_FirstUseEver);
@@ -1574,6 +1631,7 @@ int main(int, char**) {
       }
       ImGui::End();
     }
+#endif
 
     // Rendering
     int display_w, display_h;

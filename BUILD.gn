@@ -80,8 +80,18 @@ static_library("re2") {
   include_dirs = [ "//third_party/re2" ]
 }
 
-if (is_win) {
-  static_library("glfw") {
+static_library("glfw") {
+  sources = [
+    "third_party/glfw/src/context.c",
+    "third_party/glfw/src/init.c",
+    "third_party/glfw/src/input.c",
+    "third_party/glfw/src/monitor.c",
+    "third_party/glfw/src/vulkan.c",
+    "third_party/glfw/src/window.c",
+    "third_party/glfw/src/wgl_context.c",
+    "third_party/glfw/src/egl_context.c",
+  ]
+  if (is_win) {
     defines = [
       "_GLFW_WIN32",
     ]
@@ -91,21 +101,36 @@ if (is_win) {
       "/wd4204",
       "/wd4244",
     ]
-    sources = [
-      "third_party/glfw/src/context.c",
-      "third_party/glfw/src/init.c",
-      "third_party/glfw/src/input.c",
-      "third_party/glfw/src/monitor.c",
-      "third_party/glfw/src/vulkan.c",
-      "third_party/glfw/src/window.c",
+    sources += [
       "third_party/glfw/src/win32_init.c",
       "third_party/glfw/src/win32_joystick.c",
       "third_party/glfw/src/win32_monitor.c",
       "third_party/glfw/src/win32_time.c",
       "third_party/glfw/src/win32_tls.c",
       "third_party/glfw/src/win32_window.c",
-      "third_party/glfw/src/wgl_context.c",
-      "third_party/glfw/src/egl_context.c",
+    ]
+  } else if (is_mac) {
+    defines = [
+      "_GLFW_COCOA",
+      "_GLFW_USE_CHDIR",
+      "_GLFW_USE_EGLPLATFORM_H",
+      "_GLFW_USE_MENUBAR",
+      "_GLFW_USE_RETINA",
+    ]
+    cflags = [
+      "-Wdeprecated-declarations",
+    ]
+    include_dirs = [
+      "/usr/include/sys",
+    ]
+    sources += [
+      "third_party/glfw/src/cocoa_init.m",
+      "third_party/glfw/src/cocoa_joystick.m",
+      "third_party/glfw/src/cocoa_monitor.m",
+      "third_party/glfw/src/cocoa_window.m",
+      "third_party/glfw/src/cocoa_time.c",
+      "third_party/glfw/src/posix_tls.c",
+      "third_party/glfw/src/nsgl_context.m",
     ]
   }
 }
@@ -115,17 +140,19 @@ executable("sg") {
     ":sglib",
   ]
 
-  if (is_win) {
-    deps += [
-      ":glfw",
-    ]
-  }
+  deps += [
+    ":glfw",
+  ]
 
   sources = [
     "src/main.cc",
     "src/sg.rc",
     "third_party/imgui/imgui.cpp",
     "third_party/imgui/imgui_draw.cpp",
+  ]
+
+  include_dirs = [
+    "third_party/glfw/include",
   ]
 
   if (is_win) {
@@ -135,16 +162,12 @@ executable("sg") {
       "opengl32.lib",
       "shell32.lib",
     ]
-    include_dirs = [
-      "third_party/glfw/include",
-    ]
   } else if (is_mac) {
     libs = [
       "OpenGL.framework",
       "Cocoa.framework",
       "IOKit.framework",
       "CoreVideo.framework",
-      "glfw3",
     ]
   }
 }
