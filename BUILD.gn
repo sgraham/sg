@@ -2,33 +2,58 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-static_library("sglib") {
-  deps = [
-    ":re2",
-  ]
-
+static_library("glfw") {
   sources = [
-    "src/empty.cc",
-    #"src/dbgeng/debugger_dbgeng.cc",
-    #"src/docking_resizer.cc",
-    #"src/docking_split_container.cc",
-    #"src/docking_tool_window.cc",
-    #"src/docking_workspace.cc",
-    #"src/focus.cc",
-    #"src/gfx_win.cc",
-    #"src/scroll_helper.cc",
-    #"src/skin.cc",
-    #"src/source_view/cpp_lexer.cc",
-    #"src/source_view/lexer.cc",
-    #"src/source_view/lexer_state.cc",
-    #"src/source_view/source_view.cc",
-    #"src/text_edit.cc",
-    #"src/tool_window_dragger.cc",
-    #"src/tree_grid.cc",
-    #"src/widget.cc",
+    "third_party/glfw/src/context.c",
+    "third_party/glfw/src/init.c",
+    "third_party/glfw/src/input.c",
+    "third_party/glfw/src/monitor.c",
+    "third_party/glfw/src/vulkan.c",
+    "third_party/glfw/src/window.c",
   ]
-
-  include_dirs = [ "//third_party/re2" ]
+  if (is_win) {
+    defines = [
+      "_GLFW_WIN32",
+    ]
+    cflags = [
+      "/wd4100",
+      "/wd4152",
+      "/wd4204",
+      "/wd4244",
+    ]
+    sources += [
+      "third_party/glfw/src/egl_context.c",
+      "third_party/glfw/src/wgl_context.c",
+      "third_party/glfw/src/win32_init.c",
+      "third_party/glfw/src/win32_joystick.c",
+      "third_party/glfw/src/win32_monitor.c",
+      "third_party/glfw/src/win32_time.c",
+      "third_party/glfw/src/win32_tls.c",
+      "third_party/glfw/src/win32_window.c",
+    ]
+  } else if (is_mac) {
+    defines = [
+      "_GLFW_COCOA",
+      "_GLFW_USE_CHDIR",
+      "_GLFW_USE_MENUBAR",
+      "_GLFW_USE_RETINA",
+    ]
+    cflags = [
+      "-Wno-deprecated-declarations",
+    ]
+    include_dirs = [
+      "/usr/include/sys",
+    ]
+    sources += [
+      "third_party/glfw/src/cocoa_init.m",
+      "third_party/glfw/src/cocoa_joystick.m",
+      "third_party/glfw/src/cocoa_monitor.m",
+      "third_party/glfw/src/cocoa_window.m",
+      "third_party/glfw/src/cocoa_time.c",
+      "third_party/glfw/src/posix_tls.c",
+      "third_party/glfw/src/nsgl_context.m",
+    ]
+  }
 }
 
 static_library("re2") {
@@ -80,68 +105,46 @@ static_library("re2") {
   include_dirs = [ "//third_party/re2" ]
 }
 
-static_library("glfw") {
-  sources = [
-    "third_party/glfw/src/context.c",
-    "third_party/glfw/src/init.c",
-    "third_party/glfw/src/input.c",
-    "third_party/glfw/src/monitor.c",
-    "third_party/glfw/src/vulkan.c",
-    "third_party/glfw/src/window.c",
+static_library("sglib") {
+  deps = [
+    ":re2",
+    ":glfw",
   ]
-  if (is_win) {
-    defines = [
-      "_GLFW_WIN32",
-    ]
-    cflags = [
-      "/wd4100",
-      "/wd4152",
-      "/wd4204",
-      "/wd4244",
-    ]
-    sources += [
-      "third_party/glfw/src/egl_context.c",
-      "third_party/glfw/src/wgl_context.c",
-      "third_party/glfw/src/win32_init.c",
-      "third_party/glfw/src/win32_joystick.c",
-      "third_party/glfw/src/win32_monitor.c",
-      "third_party/glfw/src/win32_time.c",
-      "third_party/glfw/src/win32_tls.c",
-      "third_party/glfw/src/win32_window.c",
-    ]
-  } else if (is_mac) {
-    defines = [
-      "_GLFW_COCOA",
-      "_GLFW_USE_CHDIR",
-      "_GLFW_USE_EGLPLATFORM_H",
-      "_GLFW_USE_MENUBAR",
-      "_GLFW_USE_RETINA",
-    ]
-    cflags = [
-      "-Wno-deprecated-declarations",
-    ]
-    include_dirs = [
-      "/usr/include/sys",
-    ]
-    sources += [
-      "third_party/glfw/src/cocoa_init.m",
-      "third_party/glfw/src/cocoa_joystick.m",
-      "third_party/glfw/src/cocoa_monitor.m",
-      "third_party/glfw/src/cocoa_window.m",
-      "third_party/glfw/src/cocoa_time.c",
-      "third_party/glfw/src/posix_tls.c",
-      "third_party/glfw/src/nsgl_context.m",
-    ]
-  }
+
+  sources = [
+    "src/empty.cc",
+    "src/source_view/cpp_lexer.cc",
+    "src/source_view/lexer.cc",
+    "src/source_view/lexer_state.cc",
+    #"src/dbgeng/debugger_dbgeng.cc",
+    #"src/docking_resizer.cc",
+    #"src/docking_split_container.cc",
+    #"src/docking_tool_window.cc",
+    #"src/docking_workspace.cc",
+    #"src/focus.cc",
+    #"src/gfx_win.cc",
+    #"src/scroll_helper.cc",
+    #"src/skin.cc",
+    #"src/source_view/cpp_lexer.cc",
+    #"src/source_view/lexer.cc",
+    #"src/source_view/lexer_state.cc",
+    #"src/source_view/source_view.cc",
+    #"src/text_edit.cc",
+    #"src/tool_window_dragger.cc",
+    #"src/tree_grid.cc",
+    #"src/widget.cc",
+  ]
+
+  include_dirs = [
+    "//src",
+    "//third_party/re2",
+  ]
 }
+
 
 executable("sg") {
   deps = [
     ":sglib",
-  ]
-
-  deps += [
-    ":glfw",
   ]
 
   sources = [

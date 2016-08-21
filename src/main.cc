@@ -1493,8 +1493,7 @@ int main(int, char**) {
   if (!glfwInit())
     return 1;
   glfwWindowHint(GLFW_MAXIMIZED, 1);
-  GLFWwindow* window =
-      glfwCreateWindow(1280, 720, "Seaborgium", NULL, NULL);
+  GLFWwindow* window = glfwCreateWindow(1280, 720, "Seaborgium", NULL, NULL);
   glfwMakeContextCurrent(window);
 
   // Setup ImGui binding
@@ -1505,8 +1504,8 @@ int main(int, char**) {
   // extra_fonts/README.txt for more details)
   ImGuiIO& io = ImGui::GetIO();
   ImFontConfig config;
-  config.OversampleH = 5;
-  config.OversampleV = 5;
+  config.OversampleH = 3;
+  config.OversampleV = 3;
   // io.Fonts->AddFontDefault();
   // io.Fonts->AddFontFromFileTTF("../../extra_fonts/Cousine-Regular.ttf",
   // 15.0f);
@@ -1514,20 +1513,25 @@ int main(int, char**) {
   static const ImWchar ranges[] = {
       0x0020,
       0x00FF,  // Basic Latin + Latin Supplement.
-      0x21e7, 0x21e7,  // Shift.
-      0x2303, 0x2303,  // Control.
-      0x2318, 0x2318,  // Command.
-      0x2325, 0x2325,  // Option.
+      0x21e7,
+      0x21e7,  // Shift.
+      0x2303,
+      0x2303,  // Control.
+      0x2318,
+      0x2318,  // Command.
+      0x2325,
+      0x2325,  // Option.
       0,
   };
   io.Fonts->AddFontFromFileTTF(
-      "Inconsolata-Regular.ttf", 15.0f, &config, ranges);
+      "Roboto-Regular.ttf", 15.0f, &config, ranges);
+  //io.Fonts->AddFontFromFileTTF(
+      //"Inconsolata-Regular.ttf", 15.0f, &config, ranges);
   // io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyClean.ttf", 13.0f);
   // io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyTiny.ttf", 10.0f);
   // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f,
   // NULL, io.Fonts->GetGlyphRangesJapanese());
 
-  bool show_test_window = true;
   bool show_another_window = false;
   ImVec4 clear_color = ImColor(114, 144, 154);
 
@@ -1537,50 +1541,52 @@ int main(int, char**) {
     ImGui_ImplGlfw_NewFrame();
 
 #if defined(OS_MAC)
-#define MAIN_MODIFIER "Cmd-"
+#define MAIN_MODIFIER "Cmd-"  // TODO(scottmg): ⌘
 #define EXTRA_MODIFIER "Opt-"
 #else
 #define MAIN_MODIFIER "Ctrl-"
 #define EXTRA_MODIFIER "Alt-"
 #endif
-    if (ImGui::BeginMainMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
-          if (ImGui::MenuItem("Open", MAIN_MODIFIER EXTRA_MODIFIER "O")) {
-          }
-          if (ImGui::MenuItem("Open From Symbols", MAIN_MODIFIER "O")) {
-          }
-          ImGui::EndMenu();
+    if (ImGui::BeginMainMenuBar()) {
+      if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("Open", MAIN_MODIFIER EXTRA_MODIFIER "O")) {
         }
-        if (ImGui::BeginMenu("View"))
-        {
-          if (ImGui::MenuItem("Command", MAIN_MODIFIER EXTRA_MODIFIER "C")) {
-          }
-          if (ImGui::MenuItem("Output", MAIN_MODIFIER EXTRA_MODIFIER "O")) {
-          }
-          if (ImGui::MenuItem("Registers", MAIN_MODIFIER EXTRA_MODIFIER "R")) {
-          }
-          if (ImGui::MenuItem("Locals", MAIN_MODIFIER EXTRA_MODIFIER "L")) {
-          }
-          if (ImGui::MenuItem("Stack", MAIN_MODIFIER EXTRA_MODIFIER "S")) {
-          }
-          if (ImGui::MenuItem("Watch", MAIN_MODIFIER EXTRA_MODIFIER "W")) {
-          }
-          if (ImGui::MenuItem("Memory 1", MAIN_MODIFIER EXTRA_MODIFIER "M")) {
-          }
-          if (ImGui::MenuItem("Memory 2", "")) {
-          }
-          if (ImGui::MenuItem("Memory 3", "")) {
-          }
-          if (ImGui::MenuItem("Memory 4", "")) {
-          }
+        if (ImGui::MenuItem("Open From Binary", MAIN_MODIFIER "O")) {
+          printf("hai\n");
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Quit", MAIN_MODIFIER "Q")) {
+          break;
+        }
+        ImGui::EndMenu();
+      }
+      if (ImGui::BeginMenu("View")) {
+        if (ImGui::MenuItem("Command", MAIN_MODIFIER EXTRA_MODIFIER "C")) {
+        }
+        if (ImGui::MenuItem("Output", MAIN_MODIFIER EXTRA_MODIFIER "O")) {
+        }
+        if (ImGui::MenuItem("Registers", MAIN_MODIFIER EXTRA_MODIFIER "R")) {
+        }
+        if (ImGui::MenuItem("Locals", MAIN_MODIFIER EXTRA_MODIFIER "L")) {
+        }
+        if (ImGui::MenuItem("Stack", MAIN_MODIFIER EXTRA_MODIFIER "S")) {
+        }
+        if (ImGui::MenuItem("Watch", MAIN_MODIFIER EXTRA_MODIFIER "W")) {
+        }
+        if (ImGui::MenuItem("Memory 1", MAIN_MODIFIER EXTRA_MODIFIER "M")) {
+        }
+        if (ImGui::MenuItem("Memory 2", "")) {
+        }
+        if (ImGui::MenuItem("Memory 3", "")) {
+        }
+        if (ImGui::MenuItem("Memory 4", "")) {
+        }
+        ImGui::EndMenu();
+      }
+      ImGui::EndMainMenuBar();
+    }
 #undef MAIN_MODIFIER
 #undef EXTRA_MODIFIER
-          ImGui::EndMenu();
-        }
-        ImGui::EndMainMenuBar();
-    }
 
     // 1. Show a simple window
     // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in
@@ -1590,10 +1596,34 @@ int main(int, char**) {
       ImGui::Text("Hello, world!");
       ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
       ImGui::ColorEdit3("clear color", (float*)&clear_color);
-      if (ImGui::Button("Test Window"))
-        show_test_window ^= 1;
       if (ImGui::Button("Another Window"))
         show_another_window ^= 1;
+
+      ImGuiIO& io = ImGui::GetIO();
+
+      ImGui::Text("MousePos: (%g, %g)", io.MousePos.x, io.MousePos.y);
+      ImGui::Text("Mouse down:");     for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (io.MouseDownDuration[i] >= 0.0f)   { ImGui::SameLine(); ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); }
+      ImGui::Text("Mouse clicked:");  for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (ImGui::IsMouseClicked(i))          { ImGui::SameLine(); ImGui::Text("b%d", i); }
+      ImGui::Text("Mouse dbl-clicked:"); for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (ImGui::IsMouseDoubleClicked(i)) { ImGui::SameLine(); ImGui::Text("b%d", i); }
+      ImGui::Text("Mouse released:"); for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (ImGui::IsMouseReleased(i))         { ImGui::SameLine(); ImGui::Text("b%d", i); }
+      ImGui::Text("MouseWheel: %.1f", io.MouseWheel);
+
+      ImGui::Text("Keys down:");      for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (io.KeysDownDuration[i] >= 0.0f)     { ImGui::SameLine(); ImGui::Text("%d (%.02f secs)", i, io.KeysDownDuration[i]); }
+      ImGui::Text("Keys pressed:");   for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (ImGui::IsKeyPressed(i))             { ImGui::SameLine(); ImGui::Text("%d", i); }
+      ImGui::Text("Keys release:");   for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (ImGui::IsKeyReleased(i))            { ImGui::SameLine(); ImGui::Text("%d", i); }
+      ImGui::Text("KeyMods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
+
+      ImGui::Text("WantCaptureMouse: %s", io.WantCaptureMouse ? "true" : "false");
+      ImGui::Text("WantCaptureKeyboard: %s", io.WantCaptureKeyboard ? "true" : "false");
+      ImGui::Text("WantTextInput: %s", io.WantTextInput ? "true" : "false");
+
+      ImGui::Button("Hovering me sets the\nkeyboard capture flag");
+      if (ImGui::IsItemHovered())
+          ImGui::CaptureKeyboardFromApp(true);
+      ImGui::SameLine();
+      ImGui::Button("Holding me clears the\nthe keyboard capture flag");
+      if (ImGui::IsItemActive())
+          ImGui::CaptureKeyboardFromApp(false);
     }
 
     // 2. Show another simple window, this time using an explicit Begin/End pair
