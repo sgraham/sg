@@ -88,8 +88,6 @@ static_library("glfw") {
     "third_party/glfw/src/monitor.c",
     "third_party/glfw/src/vulkan.c",
     "third_party/glfw/src/window.c",
-    "third_party/glfw/src/wgl_context.c",
-    "third_party/glfw/src/egl_context.c",
   ]
   if (is_win) {
     defines = [
@@ -102,6 +100,8 @@ static_library("glfw") {
       "/wd4244",
     ]
     sources += [
+      "third_party/glfw/src/egl_context.c",
+      "third_party/glfw/src/wgl_context.c",
       "third_party/glfw/src/win32_init.c",
       "third_party/glfw/src/win32_joystick.c",
       "third_party/glfw/src/win32_monitor.c",
@@ -118,7 +118,7 @@ static_library("glfw") {
       "_GLFW_USE_RETINA",
     ]
     cflags = [
-      "-Wdeprecated-declarations",
+      "-Wno-deprecated-declarations",
     ]
     include_dirs = [
       "/usr/include/sys",
