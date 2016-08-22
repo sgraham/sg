@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium Authors. All rights reserved.
+// Copyright 2016 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -1483,6 +1483,204 @@ void ImGui::DockDebugWindow() {
 /////////////////////////////// dock //////////////////////////////////////////
 /////////////////////////////// dock //////////////////////////////////////////
 
+#include "source_view/cpp_lexer.h"
+#include "source_view/lexer.h"
+
+class SourceView {
+ public:
+  SourceView();
+  ~SourceView();
+
+  void SetFilePath(const std::string& path);
+  void Draw();
+
+ private:
+  struct ColoredText {
+    Lexer::TokenType type;
+    std::string text;
+  };
+  using Line = std::vector<ColoredText>;
+
+  std::vector<Line> lines_;
+
+  DISALLOW_COPY_AND_ASSIGN(SourceView);
+};
+
+SourceView::SourceView() {}
+
+SourceView::~SourceView() {}
+
+static void SplitString(const std::string& str,
+                        char delimiter,
+                        std::vector<std::string>* into) {
+  std::vector<std::string> parsed;
+  std::string::size_type pos = 0;
+  for (;;) {
+    const std::string::size_type at = str.find(delimiter, pos);
+    if (at == std::string::npos) {
+      parsed.push_back(str.substr(pos));
+      break;
+    } else {
+      parsed.push_back(str.substr(pos, at - pos));
+      pos = at + 1;
+    }
+  }
+  into->swap(parsed);
+}
+
+ImVec4 ColorFromHex(uint32_t rgb) {
+  return ImVec4(((rgb & 0xff0000) >> 16) / 255.f,
+                ((rgb & 0xff00) >> 8) / 255.f,
+                (rgb & 0xff) / 255.f,
+                1.f);
+}
+
+// Solarized Dark.
+ImVec4 kBase03 = ColorFromHex(0x002b36);
+ImVec4 kBase02 = ColorFromHex(0x073642);
+ImVec4 kBase01 = ColorFromHex(0x586e75);
+ImVec4 kBase00 = ColorFromHex(0x657b83);
+ImVec4 kBase0 = ColorFromHex(0x839496);
+ImVec4 kBase1 = ColorFromHex(0x93a1a1);
+ImVec4 kBase2 = ColorFromHex(0xeee8d5);
+ImVec4 kBase3 = ColorFromHex(0xfdf6e3);
+ImVec4 kYellow = ColorFromHex(0xb58900);
+ImVec4 kOrange = ColorFromHex(0xcb4b16);
+ImVec4 kRed = ColorFromHex(0xdc322f);
+ImVec4 kMagenta = ColorFromHex(0xd33682);
+ImVec4 kViolet = ColorFromHex(0x6c71c4);
+ImVec4 kBlue = ColorFromHex(0x268bd2);
+ImVec4 kCyan = ColorFromHex(0x2aa198);
+ImVec4 kGreen = ColorFromHex(0x859900);
+
+ImVec4 kWhite = ColorFromHex(0xffffff);
+
+const ImVec4& ColorForTokenType(Lexer::TokenType type) {
+  switch (type) {
+    case Lexer::Comment:
+    case Lexer::CommentMultiline:
+    case Lexer::CommentSingle:
+      return kBase01;
+    case Lexer::CommentPreproc:
+      return kOrange;
+    case Lexer::Error:
+      return kRed;
+    case Lexer::Keyword:
+    case Lexer::KeywordConstant:
+    case Lexer::KeywordPseudo:
+    case Lexer::KeywordReserved:
+      return kGreen;
+    case Lexer::KeywordType:
+      return kYellow;
+    case Lexer::LiteralNumberFloat:
+    case Lexer::LiteralNumberHex:
+    case Lexer::LiteralNumberInteger:
+    case Lexer::LiteralNumberOct:
+      return kCyan;
+    case Lexer::LiteralString:
+    case Lexer::LiteralStringChar:
+    case Lexer::LiteralStringEscape:
+      return kViolet;
+    case Lexer::Name:
+    case Lexer::NameBuiltin:
+    case Lexer::NameLabel:
+      break;
+    case Lexer::NameClass:
+      return kBlue;
+    case Lexer::Operator:
+      return kGreen;
+    case Lexer::Punctuation:
+    case Lexer::Text:
+    default:
+      break;
+  }
+  return kBase0;
+}
+
+// TODO(scottmg): Losing last line if doesn't end in \n.
+void SourceView::SetFilePath(const std::string& path) {
+  FILE* f = fopen(path.c_str(), "rb");
+  if (!f)
+    return;
+  fseek(f, 0, SEEK_END);
+  int len = ftell(f);
+  std::unique_ptr<char[]> file_contents(new char[len]);
+  fseek(f, 0, SEEK_SET);
+  fread(file_contents.get(), 1, len, f);
+  fclose(f);
+
+  std::string input(file_contents.get(), len);
+  std::unique_ptr<Lexer> lexer(MakeCppLexer());
+  std::vector<Token> tokens;
+  lexer->GetTokensUnprocessed(input, &tokens);
+  Line current_line;
+  for (size_t i = 0; i < tokens.size(); ++i) {
+    const Token& token = tokens[i];
+    if (token.value == "\n") {
+      lines_.push_back(current_line);
+      current_line.clear();
+    } else {
+      ColoredText fragment;
+      fragment.type = token.token;
+      std::vector<std::string> tok_lines;
+      SplitString(token.value, '\n', &tok_lines);
+      fragment.text = tok_lines[0];
+      current_line.push_back(fragment);
+      // If we have multiple lines in a token, push as separate pieces.
+      for (size_t i = 1; i < tok_lines.size(); ++i) {
+        lines_.push_back(current_line);
+        current_line.clear();
+        fragment.text = tok_lines[i];
+        current_line.push_back(fragment);
+      }
+    }
+  }
+}
+
+void SourceView::Draw() {
+  size_t line_height = ImGui::CalcTextSize("").y;
+  ImGuiListClipper clipper(lines_.size(), line_height);
+  while (clipper.Step()) {
+    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+      if (lines_[i].empty())
+        Text("");
+      for (size_t j = 0; j < lines_[i].size(); ++j) {
+        const ColoredText& part = lines_[i][j];
+        ImGui::PushStyleColor(ImGuiCol_Text, ColorForTokenType(part.type));
+        TextUnformatted(part.text.data(), part.text.data() + part.text.size());
+        if (j != lines_[i].size() - 1)
+          SameLine(0, 0);
+        ImGui::PopStyleColor();
+      }
+    }
+  }
+
+#if 0
+  size_t start_line = 0;
+  size_t y_pixel_scroll = 0;
+  for (size_t i = start_line; i < lines_.size(); ++i) {
+    //if (!LineInView(i))
+      //break;
+
+    // TODO(scottmg): Margin, line numbers, etc.
+    size_t x = 5;
+
+    size_t line_x = 0;
+    size_t y = i * line_height - y_pixel_scroll;
+    for (const auto& part : lines_[i]) {
+      ImGui::PushStyleColor(ImGuiCol_Text, ColorForTokenType(part.type));
+      ImGui::RenderTextWrapped(ImVec2(x + line_x, y),
+                               part.text.data(),
+                               part.text.data() + part.text.size(),
+                               0.f);
+      line_x += ImGui::CalcTextSize(
+          part.text.data(), part.text.data() + part.text.size(), false, 0.f).x;
+      ImGui::PopStyleColor();
+    }
+  }
+#endif
+}
+
 static void error_callback(int error, const char* description) {
   fprintf(stderr, "Error %d: %s\n", error, description);
 }
@@ -1504,8 +1702,8 @@ int main(int, char**) {
   // extra_fonts/README.txt for more details)
   ImGuiIO& io = ImGui::GetIO();
   ImFontConfig config;
-  config.OversampleH = 3;
-  config.OversampleV = 3;
+  config.OversampleH = 4;
+  config.OversampleV = 4;
   // io.Fonts->AddFontDefault();
   // io.Fonts->AddFontFromFileTTF("../../extra_fonts/Cousine-Regular.ttf",
   // 15.0f);
@@ -1524,7 +1722,10 @@ int main(int, char**) {
       0,
   };
   io.Fonts->AddFontFromFileTTF(
+      "Inconsolata-Regular.ttf", 15.0f, &config, ranges);
+  io.Fonts->AddFontFromFileTTF(
       "Roboto-Regular.ttf", 15.0f, &config, ranges);
+  //ImFont* variable_font = ImGui::GetFont();
   //io.Fonts->AddFontFromFileTTF(
       //"Inconsolata-Regular.ttf", 15.0f, &config, ranges);
   // io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyClean.ttf", 13.0f);
@@ -1534,6 +1735,11 @@ int main(int, char**) {
 
   bool show_another_window = false;
   ImVec4 clear_color = ImColor(114, 144, 154);
+
+  std::unique_ptr<SourceView> source_view(new SourceView);
+  source_view->SetFilePath("src/main.cc");
+
+  ImGui::PushStyleColor(ImGuiCol_WindowBg, kBase03);
 
   // Main loop
   while (!glfwWindowShouldClose(window)) {
@@ -1631,6 +1837,19 @@ int main(int, char**) {
       ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiSetCond_FirstUseEver);
       ImGui::Begin("Another Window", &show_another_window);
       ImGui::Text("Hello");
+      ImGui::End();
+    }
+
+    ImGui::SetNextWindowPos(ImVec2(600, 100));
+    ImGui::SetNextWindowSize(ImVec2(650, 600), ImGuiSetCond_FirstUseEver);
+    if (ImGui::Begin("Source",
+                     nullptr,
+                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                         ImGuiWindowFlags_AlwaysVerticalScrollbar |
+                         ImGuiWindowFlags_AlwaysHorizontalScrollbar)) {
+      //ImGui::PushFont(fixed_font);
+      source_view->Draw();
+      //ImGui::PopFont();
       ImGui::End();
     }
 

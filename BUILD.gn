@@ -155,6 +155,7 @@ executable("sg") {
   ]
 
   include_dirs = [
+    "//src",
     "//third_party/glfw/include",
   ]
 

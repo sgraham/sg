@@ -97,7 +97,7 @@
 #if PLATFORM_LINUX
 #define PLATFORM_NAME "Linux"
 #elif PLATFORM_OSX
-#define PLATFORM_NAME "OSX"
+#define PLATFORM_NAME "macOS"
 #elif PLATFORM_WINDOWS
 #define PLATFORM_NAME "Windows"
 #endif
@@ -245,11 +245,11 @@ char (&COUNTOF_REQUIRES_ARRAY_ARGUMENT(const T (&)[N]))[N];  // NOLINT
 #define NOTREACHED() TRACE("Not reached!")
 #endif
 
-#define DISALLOW_COPY(TypeName) TypeName(const TypeName&)
-#define DISALLOW_ASSIGN(TypeName) void operator=(const TypeName&)
+#define DISALLOW_COPY(TypeName) TypeName(const TypeName&) = delete
+#define DISALLOW_ASSIGN(TypeName) void operator=(const TypeName&) = delete
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  TypeName(const TypeName&);               \
-  void operator=(const TypeName&)
+  TypeName(const TypeName&) = delete;      \
+  void operator=(const TypeName&) = delete;
 
 #if COMPILER_MSVC
 #pragma warning(disable : 4127)  // Conditional expression is constant.
