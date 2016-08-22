@@ -224,8 +224,7 @@ void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow*,
 void ImGui_ImplGlfw_ScrollCallback(GLFWwindow*,
                                    double /*xoffset*/,
                                    double yoffset) {
-  g_MouseWheel +=
-      (float)yoffset;  // Use fractional mouse wheel, 1.0 unit 5 lines.
+  g_MouseWheel += (float)yoffset / 3.f;
 }
 
 void ImGui_ImplGlFw_KeyCallback(GLFWwindow*,
@@ -1642,15 +1641,19 @@ void SourceView::Draw() {
   ImGuiListClipper clipper(lines_.size(), line_height);
   while (clipper.Step()) {
     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
-      if (lines_[i].empty())
+      if (lines_[i].empty()) {
         Text("");
-      for (size_t j = 0; j < lines_[i].size(); ++j) {
-        const ColoredText& part = lines_[i][j];
-        ImGui::PushStyleColor(ImGuiCol_Text, ColorForTokenType(part.type));
-        TextUnformatted(part.text.data(), part.text.data() + part.text.size());
-        if (j != lines_[i].size() - 1)
-          SameLine(0, 0);
-        ImGui::PopStyleColor();
+      } else {
+        //Text("     ");
+        //SameLine(0, 0);
+        for (size_t j = 0; j < lines_[i].size(); ++j) {
+          const ColoredText& part = lines_[i][j];
+          ImGui::PushStyleColor(ImGuiCol_Text, ColorForTokenType(part.type));
+          TextUnformatted(part.text.data(), part.text.data() + part.text.size());
+          if (j != lines_[i].size() - 1)
+            SameLine(0, 0);
+          ImGui::PopStyleColor();
+        }
       }
     }
   }
@@ -1686,7 +1689,7 @@ static void error_callback(int error, const char* description) {
 }
 
 int main(int, char**) {
-  // Setup window
+  // Setup window.
   glfwSetErrorCallback(error_callback);
   if (!glfwInit())
     return 1;
@@ -1694,19 +1697,14 @@ int main(int, char**) {
   GLFWwindow* window = glfwCreateWindow(1280, 720, "Seaborgium", NULL, NULL);
   glfwMakeContextCurrent(window);
 
-  // Setup ImGui binding
+  // Setup ImGui binding.
   ImGui_ImplGlfw_Init(window, true);
 
-  // Load Fonts
-  // (there is a default font, this is only if you want to change it. see
-  // extra_fonts/README.txt for more details)
+  // Load Fonts.
   ImGuiIO& io = ImGui::GetIO();
   ImFontConfig config;
   config.OversampleH = 4;
   config.OversampleV = 4;
-  // io.Fonts->AddFontDefault();
-  // io.Fonts->AddFontFromFileTTF("../../extra_fonts/Cousine-Regular.ttf",
-  // 15.0f);
   // TODO(scottmg): Font with macOS symbols.
   static const ImWchar ranges[] = {
       0x0020,
@@ -1722,18 +1720,10 @@ int main(int, char**) {
       0,
   };
   io.Fonts->AddFontFromFileTTF(
-      "Inconsolata-Regular.ttf", 15.0f, &config, ranges);
-  io.Fonts->AddFontFromFileTTF(
       "Roboto-Regular.ttf", 15.0f, &config, ranges);
-  //ImFont* variable_font = ImGui::GetFont();
-  //io.Fonts->AddFontFromFileTTF(
-      //"Inconsolata-Regular.ttf", 15.0f, &config, ranges);
-  // io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyClean.ttf", 13.0f);
-  // io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyTiny.ttf", 10.0f);
-  // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f,
-  // NULL, io.Fonts->GetGlyphRangesJapanese());
+  io.Fonts->AddFontFromFileTTF(
+      "RobotoMono-Regular.ttf", 14.0f, &config, ranges);
 
-  bool show_another_window = false;
   ImVec4 clear_color = ImColor(114, 144, 154);
 
   std::unique_ptr<SourceView> source_view(new SourceView);
@@ -1741,9 +1731,15 @@ int main(int, char**) {
 
   ImGui::PushStyleColor(ImGuiCol_WindowBg, kBase03);
 
+//#define NO_EVENT_WAIT
+
   // Main loop
   while (!glfwWindowShouldClose(window)) {
+#if defined(NO_EVENT_WAIT)
+    glfwPollEvents();
+#else
     glfwWaitEvents();
+#endif
     ImGui_ImplGlfw_NewFrame();
 
 #if defined(OS_MAC)
@@ -1802,25 +1798,67 @@ int main(int, char**) {
       ImGui::Text("Hello, world!");
       ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
       ImGui::ColorEdit3("clear color", (float*)&clear_color);
-      if (ImGui::Button("Another Window"))
-        show_another_window ^= 1;
+      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+                  1000.0f / ImGui::GetIO().Framerate,
+                  ImGui::GetIO().Framerate);
 
       ImGuiIO& io = ImGui::GetIO();
 
       ImGui::Text("MousePos: (%g, %g)", io.MousePos.x, io.MousePos.y);
-      ImGui::Text("Mouse down:");     for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (io.MouseDownDuration[i] >= 0.0f)   { ImGui::SameLine(); ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); }
-      ImGui::Text("Mouse clicked:");  for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (ImGui::IsMouseClicked(i))          { ImGui::SameLine(); ImGui::Text("b%d", i); }
-      ImGui::Text("Mouse dbl-clicked:"); for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (ImGui::IsMouseDoubleClicked(i)) { ImGui::SameLine(); ImGui::Text("b%d", i); }
-      ImGui::Text("Mouse released:"); for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++) if (ImGui::IsMouseReleased(i))         { ImGui::SameLine(); ImGui::Text("b%d", i); }
+      ImGui::Text("Mouse down:");
+      for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+        if (io.MouseDownDuration[i] >= 0.0f) {
+          ImGui::SameLine();
+          ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]);
+        }
+      ImGui::Text("Mouse clicked:");
+      for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+        if (ImGui::IsMouseClicked(i)) {
+          ImGui::SameLine();
+          ImGui::Text("b%d", i);
+        }
+      ImGui::Text("Mouse dbl-clicked:");
+      for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+        if (ImGui::IsMouseDoubleClicked(i)) {
+          ImGui::SameLine();
+          ImGui::Text("b%d", i);
+        }
+      ImGui::Text("Mouse released:");
+      for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+        if (ImGui::IsMouseReleased(i)) {
+          ImGui::SameLine();
+          ImGui::Text("b%d", i);
+        }
       ImGui::Text("MouseWheel: %.1f", io.MouseWheel);
 
-      ImGui::Text("Keys down:");      for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (io.KeysDownDuration[i] >= 0.0f)     { ImGui::SameLine(); ImGui::Text("%d (%.02f secs)", i, io.KeysDownDuration[i]); }
-      ImGui::Text("Keys pressed:");   for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (ImGui::IsKeyPressed(i))             { ImGui::SameLine(); ImGui::Text("%d", i); }
-      ImGui::Text("Keys release:");   for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++) if (ImGui::IsKeyReleased(i))            { ImGui::SameLine(); ImGui::Text("%d", i); }
-      ImGui::Text("KeyMods: %s%s%s%s", io.KeyCtrl ? "CTRL " : "", io.KeyShift ? "SHIFT " : "", io.KeyAlt ? "ALT " : "", io.KeySuper ? "SUPER " : "");
+      ImGui::Text("Keys down:");
+      for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++)
+        if (io.KeysDownDuration[i] >= 0.0f) {
+          ImGui::SameLine();
+          ImGui::Text("%d (%.02f secs)", i, io.KeysDownDuration[i]);
+        }
+      ImGui::Text("Keys pressed:");
+      for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++)
+        if (ImGui::IsKeyPressed(i)) {
+          ImGui::SameLine();
+          ImGui::Text("%d", i);
+        }
+      ImGui::Text("Keys release:");
+      for (int i = 0; i < IM_ARRAYSIZE(io.KeysDown); i++)
+        if (ImGui::IsKeyReleased(i)) {
+          ImGui::SameLine();
+          ImGui::Text("%d", i);
+        }
+      ImGui::Text("KeyMods: %s%s%s%s",
+                  io.KeyCtrl ? "CTRL " : "",
+                  io.KeyShift ? "SHIFT " : "",
+                  io.KeyAlt ? "ALT " : "",
+                  io.KeySuper ? "SUPER " : "");
 
-      ImGui::Text("WantCaptureMouse: %s", io.WantCaptureMouse ? "true" : "false");
-      ImGui::Text("WantCaptureKeyboard: %s", io.WantCaptureKeyboard ? "true" : "false");
+      ImGui::Text("WantCaptureMouse: %s",
+                  io.WantCaptureMouse ? "true" : "false");
+      ImGui::Text("WantCaptureKeyboard: %s",
+                  io.WantCaptureKeyboard ? "true" : "false");
       ImGui::Text("WantTextInput: %s", io.WantTextInput ? "true" : "false");
 
       ImGui::Button("Hovering me sets the\nkeyboard capture flag");
@@ -1832,24 +1870,15 @@ int main(int, char**) {
           ImGui::CaptureKeyboardFromApp(false);
     }
 
-    // 2. Show another simple window, this time using an explicit Begin/End pair
-    if (show_another_window) {
-      ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiSetCond_FirstUseEver);
-      ImGui::Begin("Another Window", &show_another_window);
-      ImGui::Text("Hello");
-      ImGui::End();
-    }
-
     ImGui::SetNextWindowPos(ImVec2(600, 100));
     ImGui::SetNextWindowSize(ImVec2(650, 600), ImGuiSetCond_FirstUseEver);
     if (ImGui::Begin("Source",
                      nullptr,
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                         ImGuiWindowFlags_AlwaysVerticalScrollbar |
-                         ImGuiWindowFlags_AlwaysHorizontalScrollbar)) {
-      //ImGui::PushFont(fixed_font);
+                         ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
+      ImGui::PushFont(io.Fonts->Fonts[1]);
       source_view->Draw();
-      //ImGui::PopFont();
+      ImGui::PopFont();
       ImGui::End();
     }
 
