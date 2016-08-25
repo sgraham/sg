@@ -41,12 +41,22 @@ config("compiler") {
       "/wd4702",
       "/wd4267",
     ]
+    defines = [
+      "OS_WIN=1",
+      "_HAS_EXCEPTIONS=0",
+      "NOMINMAX",
+      "WIN32",
+      "_WIN32",
+    ]
   } else if (is_mac) {
     cflags_cc += [
       "-std=c++11",
     ]
     lib_dirs = [
       "/usr/local/lib",
+    ]
+    defines = [
+      "OS_MAC=1",
     ]
   }
 }
@@ -67,15 +77,6 @@ config("default_warnings") {
   if (is_win) {
     defines = [
       "_CRT_SECURE_NO_WARNINGS",
-      "_HAS_EXCEPTIONS=0",
-      "NOMINMAX",
-      "WIN32",
-      "_WIN32",
-      "OS_WIN=1",
-    ]
-  } else if (is_mac) {
-    defines = [
-      "OS_MAC=1",
     ]
   }
 }

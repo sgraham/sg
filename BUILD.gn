@@ -196,8 +196,6 @@ executable("sg_test") {
     "//third_party/googletest/googletest",
   ]
 
-  defines = [ "GTEST_HAS_SEH=0" ]
-
   if (is_win) {
     libs = [
       "gdi32.lib",

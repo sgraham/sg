@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <GLFW/glfw3.h>
 
+#include <memory>
+
 #define IMGUI_DEFINE_PLACEMENT_NEW
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "third_party/imgui/imgui_internal.h"
@@ -428,6 +430,7 @@ void ImGui_ImplGlfw_NewFrame() {
 // https://github.com/nem0/LumixEngine/blob/master/external/imgui/imgui_dock.inl
 // modified from
 // https://bitbucket.org/duangle/liminal/src/tip/src/liminal/imgui_dock.cpp
+#if 0
 
 using namespace ImGui;
 
@@ -1461,6 +1464,7 @@ void ImGui::EndDock() {
 void ImGui::DockDebugWindow() {
   g_dock.debugWindow();
 }
+#endif
 
 /////////////////////////////// dock //////////////////////////////////////////
 /////////////////////////////// dock //////////////////////////////////////////
@@ -1626,10 +1630,10 @@ void SourceView::SetFilePath(const std::string& path) {
       fragment.text = tok_lines[0];
       current_line.push_back(fragment);
       // If we have multiple lines in a token, push as separate pieces.
-      for (size_t i = 1; i < tok_lines.size(); ++i) {
+      for (size_t j = 1; j < tok_lines.size(); ++j) {
         lines_.push_back(current_line);
         current_line.clear();
-        fragment.text = tok_lines[i];
+        fragment.text = tok_lines[j];
         current_line.push_back(fragment);
       }
     }
@@ -1637,21 +1641,22 @@ void SourceView::SetFilePath(const std::string& path) {
 }
 
 void SourceView::Draw() {
-  size_t line_height = ImGui::CalcTextSize("").y;
+  float line_height = ImGui::CalcTextSize("").y;
   ImGuiListClipper clipper(lines_.size(), line_height);
   while (clipper.Step()) {
     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
       if (lines_[i].empty()) {
-        Text("");
+        ImGui::Text("");
       } else {
         //Text("     ");
         //SameLine(0, 0);
         for (size_t j = 0; j < lines_[i].size(); ++j) {
           const ColoredText& part = lines_[i][j];
           ImGui::PushStyleColor(ImGuiCol_Text, ColorForTokenType(part.type));
-          TextUnformatted(part.text.data(), part.text.data() + part.text.size());
+          ImGui::TextUnformatted(part.text.data(),
+                                 part.text.data() + part.text.size());
           if (j != lines_[i].size() - 1)
-            SameLine(0, 0);
+            ImGui::SameLine(0, 0);
           ImGui::PopStyleColor();
         }
       }
@@ -1802,7 +1807,7 @@ int main(int, char**) {
                   1000.0f / ImGui::GetIO().Framerate,
                   ImGui::GetIO().Framerate);
 
-      ImGuiIO& io = ImGui::GetIO();
+      //ImGuiIO& io = ImGui::GetIO();
 
       ImGui::Text("MousePos: (%g, %g)", io.MousePos.x, io.MousePos.y);
       ImGui::Text("Mouse down:");
