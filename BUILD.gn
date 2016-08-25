@@ -162,9 +162,10 @@ executable("sg") {
   if (is_win) {
     libs = [
       "gdi32.lib",
-      "user32.lib",
       "opengl32.lib",
+      "shcore.lib",
       "shell32.lib",
+      "user32.lib",
     ]
   } else if (is_mac) {
     libs = [

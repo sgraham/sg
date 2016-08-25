@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#if defined(OS_WIN)
+#include <windows.h>
+#include <ShellScalingApi.h>
+#endif
 #include "third_party/imgui/imgui.h"
 #include <stdio.h>
 #include <GLFW/glfw3.h>
@@ -362,6 +366,18 @@ void ImGui_ImplGlfw_NewFrame() {
   glfwGetWindowSize(g_Window, &w, &h);
   glfwGetFramebufferSize(g_Window, &display_w, &display_h);
   io.DisplaySize = ImVec2((float)w, (float)h);
+
+#if 0
+  printf("display_w, h: %d, %d\n", display_w, display_h);
+  printf("window w, h: %d, %d\n", w, h);
+  HMONITOR hmonitor = MonitorFromWindow(nullptr, MONITOR_DEFAULTTOPRIMARY);
+  UINT dpi_x, dpi_y;
+  if (GetDpiForMonitor(hmonitor, MDT_EFFECTIVE_DPI, &dpi_x, &dpi_y) != S_OK) {
+    abort();
+  }
+  printf("dpi_x, dpi_y: %d, %d\n", dpi_x, dpi_y);
+#endif
+
   io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0,
                                       h > 0 ? ((float)display_h / h) : 0);
 

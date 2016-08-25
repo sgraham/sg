@@ -1,6 +1,8 @@
 #include <windows.h>
 #include "resource.h"
 
+RES_MANIFEST RT_MANIFEST "sg.manifest"
+
 RES_MAIN_ICON ICON "art/sg.ico"
 
 RES_INDICATOR_BREAKPOINT IMAGE "art/breakpoint.png"

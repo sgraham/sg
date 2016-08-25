@@ -5,6 +5,8 @@
 #ifndef RESOURCE_H_
 #define RESOURCE_H_
 
+#define RES_MANIFEST 1
+
 #define RES_MAIN_ICON 100
 
 #define RES_INDICATOR_BREAKPOINT 101
