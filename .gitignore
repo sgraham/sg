@@ -2,3 +2,5 @@ out/
 scratch/
 .DS_Store
 tags
+third_party/llvm
+third_party/llvm-build

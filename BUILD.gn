@@ -105,6 +105,18 @@ static_library("re2") {
   include_dirs = [ "//third_party/re2" ]
 }
 
+if (is_mac) {
+  copy("lldb_binaries") {
+    sources = [
+      "third_party/llvm-build/bin",
+      "third_party/llvm-build/lib"
+    ]
+    outputs = [
+      "$root_out_dir/{{source_file_part}}",
+    ]
+  }
+}
+
 static_library("sglib") {
   deps = [
     ":re2",
